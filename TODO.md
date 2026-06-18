@@ -120,6 +120,8 @@ Build the 2025 backend database and frontend dashboard into an extensible journa
   - warning/CAS/founding annotations
 - [x] Add export button for filtered subset CSV.
 - [x] Add GitHub Pages workflow to publish `web/`.
+- [x] Add dark mode for the web viewer.
+- [x] Add local web maintenance/publishing documentation.
 
 ## Data Sources Needed
 
