@@ -126,6 +126,12 @@
       min-height: 40px;
     }
 
+    .inline-fields {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
     .segmented {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -376,6 +382,95 @@
     .detail-row:last-child { border-bottom: 0; }
     .detail-row span:first-child { color: var(--muted); }
 
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: none;
+      place-items: center;
+      padding: 24px;
+      background: rgba(23, 32, 51, 0.48);
+    }
+
+    .modal-backdrop.open {
+      display: grid;
+    }
+
+    .journal-modal {
+      width: min(920px, 100%);
+      max-height: min(760px, calc(100vh - 48px));
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: 0 22px 70px rgba(10, 20, 40, 0.28);
+    }
+
+    .modal-head {
+      display: flex;
+      gap: 14px;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel-soft);
+    }
+
+    .modal-title {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.3;
+    }
+
+    .modal-subtitle {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .modal-close {
+      width: 34px;
+      min-width: 34px;
+      min-height: 34px;
+      border-radius: 7px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .modal-close:hover {
+      color: var(--ink);
+      border-color: #9db7e8;
+    }
+
+    .modal-body {
+      overflow: auto;
+      padding: 16px 20px 20px;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0 22px;
+    }
+
+    .detail-section {
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+
+    .detail-section h4 {
+      margin: 0 0 8px;
+      font-size: 14px;
+    }
+
     .table-wrap {
       overflow: auto;
       border: 1px solid var(--line);
@@ -446,6 +541,11 @@
       .stats { grid-template-columns: 1fr; }
       .bar-row { grid-template-columns: 1fr; }
       .detail-row { grid-template-columns: 1fr; }
+      .modal-backdrop { padding: 12px; }
+      .journal-modal { max-height: calc(100vh - 24px); }
+      .modal-head { padding: 15px; }
+      .modal-body { padding: 14px 15px 16px; }
+      .detail-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -493,9 +593,24 @@
       </div>
 
       <div class="field">
-        <label for="country">出版社国家/地区（临时）</label>
+        <label for="country">国家/地区（匹配任意角色）</label>
         <select id="country">
           <option value="">全部国家/地区</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="countryRole">国家角色</label>
+        <select id="countryRole">
+          <option value="">全部角色</option>
+          <option value="publisher">publisher 出版社</option>
+          <option value="owner">owner 所有者</option>
+          <option value="sponsor">sponsor 主办/资助</option>
+          <option value="society">society 学会</option>
+          <option value="editorial_office">editorial office 编辑部</option>
+          <option value="institution">institution 机构</option>
+          <option value="collaborator">collaborator 合作方</option>
+          <option value="inferred">inferred 推断</option>
         </select>
       </div>
 
@@ -523,6 +638,14 @@
       </div>
 
       <div class="field">
+        <label>PubMed 发文年份区间</label>
+        <div class="inline-fields">
+          <input id="pubmedStart" type="number" min="1900" max="2100" step="1" placeholder="开始年">
+          <input id="pubmedEnd" type="number" min="1900" max="2100" step="1" placeholder="结束年">
+        </div>
+      </div>
+
+      <div class="field">
         <label for="sortBy">排序</label>
         <select id="sortBy">
           <option value="if_desc">影响因子从高到低</option>
@@ -543,7 +666,7 @@
         <div class="stat"><b id="statScie">0</b><span>SCIE</span></div>
         <div class="stat"><b id="statEsci">0</b><span>ESCI</span></div>
         <div class="stat"><b id="statMedianIf">NA</b><span>中位影响因子</span></div>
-        <div class="stat"><b id="statPubmed">待采集</b><span>PubMed / 周期字段</span></div>
+        <div class="stat"><b id="statPubmed">待采集</b><span>选中区间 PubMed 发文</span></div>
       </section>
 
       <div class="grid">
@@ -553,6 +676,7 @@
             <div class="view-buttons">
               <button type="button" id="cardViewBtn" class="active">卡片</button>
               <button type="button" id="tableViewBtn">紧凑表</button>
+              <button type="button" id="exportCsvBtn">导出 CSV</button>
             </div>
           </div>
           <div id="resultMount"></div>
@@ -566,7 +690,7 @@
           </section>
 
           <section class="panel">
-            <h2 class="section-title">出版社国家/地区（临时）</h2>
+            <h2 class="section-title">国家/地区信号</h2>
             <div class="bars" id="countryBars"></div>
           </section>
 
@@ -580,16 +704,23 @@
             <div class="bars" id="ifBars"></div>
           </section>
 
-          <section class="panel">
-            <h2 class="section-title">期刊详情</h2>
-            <div class="detail" id="detailMount">
-              <p class="small-note">点击左侧任一期刊，查看分类、ISSN、影响因子、未来 PubMed 采集字段。</p>
-            </div>
-          </section>
         </div>
       </div>
     </div>
   </main>
+
+  <div class="modal-backdrop" id="detailModal" aria-hidden="true">
+    <section class="journal-modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-head">
+        <div>
+          <h2 class="modal-title" id="modalTitle">期刊详情</h2>
+          <div class="modal-subtitle" id="modalSubtitle"></div>
+        </div>
+        <button type="button" class="modal-close" id="modalClose" aria-label="关闭详情">×</button>
+      </div>
+      <div class="modal-body detail" id="detailMount"></div>
+    </section>
+  </div>
 
   <script src="journals-data.js"></script>
   <script>
@@ -628,8 +759,39 @@
       return raw.split(";")[0].split("|")[0].trim() || "未分类";
     }
 
-    function countryName(row) {
-      return row.country || "未记录";
+    function publisherCountryName(row) {
+      return row.publisher_country || row.country || "未记录";
+    }
+
+    function countryRecords(row, role = "") {
+      const records = Array.isArray(row.journal_country_records) ? row.journal_country_records : [];
+      if (!role) return records;
+      return records.filter(record => record.role === role);
+    }
+
+    function countryNames(row, role = "") {
+      const names = countryRecords(row, role).map(record => record.country).filter(Boolean);
+      if (!names.length && (!role || role === "publisher")) names.push(publisherCountryName(row));
+      return [...new Set(names.filter(value => value && value !== "未记录"))];
+    }
+
+    function countrySummary(row) {
+      const names = countryNames(row);
+      return names.length ? names.join(" / ") : "未记录";
+    }
+
+    function roleLabel(role) {
+      const labels = {
+        publisher: "出版社",
+        owner: "所有者",
+        sponsor: "主办/资助",
+        society: "学会",
+        editorial_office: "编辑部",
+        institution: "机构",
+        collaborator: "合作方",
+        inferred: "推断"
+      };
+      return labels[role] || role || "未记录";
     }
 
     function publisherName(row) {
@@ -658,6 +820,67 @@
       return text(value).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
     }
 
+    function normalizedCompact(value) {
+      return text(value).toLowerCase().replace(/[^a-z0-9]+/g, "");
+    }
+
+    function queryMatches(row, rawQuery) {
+      const query = normalizedText(rawQuery);
+      if (!query) return true;
+      const compactQuery = normalizedCompact(rawQuery);
+      const fields = [
+        row.title,
+        row.issn,
+        row.eissn,
+        row.publisher,
+        publisherCountryName(row),
+        countrySummary(row),
+        countryRecords(row).map(record => `${record.country} ${record.role} ${record.note || ""}`).join(" "),
+        row.categories,
+        row.biomed_reason
+      ];
+      const normalizedFields = fields.map(normalizedText);
+      const compactFields = fields.map(normalizedCompact);
+      if (normalizedFields.some(value => value.includes(query))) return true;
+      if (compactQuery && compactFields.some(value => value.includes(compactQuery))) return true;
+      if (titleInitials(row.title).includes(compactQuery)) return true;
+      const queryWords = query.split(" ").filter(Boolean);
+      const titleWords = normalizedText(row.title).split(" ").filter(Boolean);
+      const joinedFields = normalizedFields.join(" ");
+      return queryWords.every(word => joinedFields.includes(word) || titleWords.some(titleWord => titleWord.startsWith(word)));
+    }
+
+    function pubmedCounts(row) {
+      return row.pubmed_year_counts && typeof row.pubmed_year_counts === "object" ? row.pubmed_year_counts : {};
+    }
+
+    function pubmedTotal(row, startYear = null, endYear = null) {
+      const counts = pubmedCounts(row);
+      let total = 0;
+      for (const [yearText, count] of Object.entries(counts)) {
+        const year = Number(yearText);
+        if (!Number.isFinite(year)) continue;
+        if (startYear !== null && year < startYear) continue;
+        if (endYear !== null && year > endYear) continue;
+        total += Number(count) || 0;
+      }
+      if (total === 0 && startYear === null && endYear === null && Number.isFinite(Number(row.pubmed_count))) {
+        return Number(row.pubmed_count);
+      }
+      return total;
+    }
+
+    function selectedPubmedRange() {
+      const startText = document.querySelector("#pubmedStart").value;
+      const endText = document.querySelector("#pubmedEnd").value;
+      let start = startText === "" ? null : Number(startText);
+      let end = endText === "" ? null : Number(endText);
+      if (start !== null && end !== null && start > end) {
+        [start, end] = [end, start];
+      }
+      return { start, end, active: start !== null || end !== null };
+    }
+
     function median(values) {
       const nums = values.filter(value => Number.isFinite(value)).sort((a, b) => a - b);
       if (!nums.length) return null;
@@ -674,34 +897,26 @@
       const indexType = document.querySelector("#indexType").value;
       const category = document.querySelector("#category").value;
       const country = document.querySelector("#country").value;
+      const countryRole = document.querySelector("#countryRole").value;
       const publisher = document.querySelector("#publisher").value;
       const qtile = document.querySelector("#quartile").value;
       const ifMinText = document.querySelector("#ifMin").value;
       const ifMin = ifMinText === "" ? null : Number(ifMinText);
       const sortBy = document.querySelector("#sortBy").value;
+      const pubmedRange = selectedPubmedRange();
 
       const filtered = state.rows.filter(row => {
-        const haystack = [
-          row.title,
-          normalizedText(row.title),
-          titleInitials(row.title),
-          row.issn,
-          row.eissn,
-          row.publisher,
-          row.categories,
-          row.biomed_reason
-        ]
-          .join(" ")
-          .toLowerCase();
         if (state.scope === "biomed" && !row.is_biomed) return false;
         if (state.scope === "nonbiomed" && row.is_biomed) return false;
-        if (q && !haystack.includes(q)) return false;
+        if (q && !queryMatches(row, q)) return false;
         if (indexType && row.index_type !== indexType) return false;
         if (category && categoryName(row) !== category) return false;
-        if (country && countryName(row) !== country) return false;
+        if (country && !countryNames(row, countryRole).includes(country)) return false;
+        if (!country && countryRole && !countryNames(row, countryRole).length) return false;
         if (publisher && publisherName(row) !== publisher) return false;
         if (qtile && quartile(row) !== qtile) return false;
         if (ifMin !== null && !(Number(row.impact_factor) >= ifMin)) return false;
+        if (pubmedRange.active && pubmedTotal(row, pubmedRange.start, pubmedRange.end) <= 0) return false;
         return true;
       });
 
@@ -740,7 +955,7 @@
 
     function populateFilters() {
       populateSelect("#category", [...new Set(state.rows.map(categoryName).filter(Boolean))].sort());
-      populateSelect("#country", [...new Set(state.rows.map(countryName).filter(value => value && value !== "未记录"))].sort());
+      populateSelect("#country", [...new Set(state.rows.flatMap(row => countryNames(row)).filter(value => value && value !== "未记录"))].sort());
       populateSelect("#publisher", [...new Set(state.rows.map(publisherName).filter(value => value && value !== "未记录"))].sort());
     }
 
@@ -750,6 +965,9 @@
       document.querySelector("#statEsci").textContent = fmtNum(rows.filter(row => row.index_type === "ESCI").length);
       const med = median(rows.map(row => Number(row.impact_factor)));
       document.querySelector("#statMedianIf").textContent = med === null ? "NA" : med.toFixed(1);
+      const range = selectedPubmedRange();
+      const total = rows.reduce((sum, row) => sum + pubmedTotal(row, range.start, range.end), 0);
+      document.querySelector("#statPubmed").textContent = total > 0 ? fmtNum(total) : "待采集";
     }
 
     function counter(rows, keyFn) {
@@ -757,6 +975,16 @@
       for (const row of rows) {
         const key = keyFn(row);
         map.set(key, (map.get(key) || 0) + 1);
+      }
+      return [...map.entries()].sort((a, b) => b[1] - a[1]);
+    }
+
+    function multiCounter(rows, valuesFn) {
+      const map = new Map();
+      for (const row of rows) {
+        for (const key of valuesFn(row)) {
+          map.set(key, (map.get(key) || 0) + 1);
+        }
       }
       return [...map.entries()].sort((a, b) => b[1] - a[1]);
     }
@@ -797,7 +1025,7 @@
           <div class="journal-head">
             <div>
               <div class="journal-title">${escapeHtml(row.title)}</div>
-              <div class="journal-meta">${escapeHtml(row.publisher)} · ${escapeHtml(countryName(row))} · ISSN ${escapeHtml(row.issn)} · eISSN ${escapeHtml(row.eissn)}</div>
+              <div class="journal-meta">${escapeHtml(row.publisher)} · 国家 ${escapeHtml(countrySummary(row))} · ISSN ${escapeHtml(row.issn)} · eISSN ${escapeHtml(row.eissn)}</div>
             </div>
             <div class="if-box"><b>${fmtIf(row.impact_factor)}</b><span>JIF</span></div>
           </div>
@@ -809,6 +1037,7 @@
             ${row.warning_level ? `<span class="chip amber">预警 ${escapeHtml(row.warning_level)}</span>` : ""}
             ${row.cas_zone ? `<span class="chip green">中科院 ${escapeHtml(row.cas_zone)}</span>` : ""}
             ${row.is_new_journal ? `<span class="chip amber">新刊</span>` : ""}
+            ${pubmedTotal(row) ? `<span class="chip green">PubMed ${fmtNum(pubmedTotal(row))}</span>` : ""}
           </div>
         </article>
       `).join("")}</div>`;
@@ -828,7 +1057,8 @@
                 <th>分区</th>
                 <th>分类</th>
                 <th>ISSN / eISSN</th>
-                <th>国家/地区</th>
+                <th>国家/地区信号</th>
+                <th>PubMed</th>
                 <th>出版社</th>
               </tr>
             </thead>
@@ -841,7 +1071,8 @@
                   <td>${escapeHtml(quartile(row) || "NA")}</td>
                   <td>${escapeHtml(categoryName(row))}</td>
                   <td>${escapeHtml(row.issn)} / ${escapeHtml(row.eissn)}</td>
-                  <td>${escapeHtml(countryName(row))}</td>
+                  <td>${escapeHtml(countrySummary(row))}</td>
+                  <td class="num">${pubmedTotal(row) ? fmtNum(pubmedTotal(row)) : "NA"}</td>
                   <td>${escapeHtml(row.publisher)}</td>
                 </tr>
               `).join("")}
@@ -852,46 +1083,146 @@
     }
 
     function renderDetail(row) {
+      const modal = document.querySelector("#detailModal");
       const mount = document.querySelector("#detailMount");
       if (!row) {
-        mount.innerHTML = `<p class="small-note">点击任一期刊，查看分类、ISSN、影响因子、未来 PubMed 采集字段。</p>`;
+        closeDetail();
         return;
       }
+      document.querySelector("#modalTitle").textContent = row.title || "期刊详情";
+      document.querySelector("#modalSubtitle").textContent = `${row.publisher || "未记录出版社"} · ${row.index_type || "未记录索引"} · JIF ${fmtIf(row.impact_factor)}`;
+      const countryRows = countryRecords(row).map(record => `
+        <div class="detail-row">
+          <span>${escapeHtml(roleLabel(record.role))}</span>
+          <span>${escapeHtml(record.country)} · confidence ${escapeHtml(record.confidence)} · ${escapeHtml(record.source_type || "")}</span>
+        </div>
+      `).join("");
       mount.innerHTML = `
-        <h3>${escapeHtml(row.title)}</h3>
-        <div class="detail-row"><span>索引</span><span>${escapeHtml(row.index_type)}</span></div>
-        <div class="detail-row"><span>影响因子</span><span>${fmtIf(row.impact_factor)} ${escapeHtml(quartile(row) || "")}</span></div>
-        <div class="detail-row"><span>JCR 分类</span><span>${escapeHtml(row.categories)}</span></div>
-        <div class="detail-row"><span>生物医药依据</span><span>${escapeHtml(row.biomed_reason || "未命中分类白名单")}</span></div>
-        <div class="detail-row"><span>ISSN</span><span>${escapeHtml(row.issn)} / ${escapeHtml(row.eissn)}</span></div>
-        <div class="detail-row"><span>出版社国家</span><span>${escapeHtml(countryName(row))}</span></div>
-        <div class="detail-row"><span>语言</span><span>${escapeHtml(row.languages)}</span></div>
-        <div class="detail-row"><span>出版社</span><span>${escapeHtml(row.publisher)}</span></div>
-        <div class="detail-row"><span>出版社地址</span><span>${escapeHtml(row.publisher_address)}</span></div>
-        <div class="detail-row"><span>预警标识</span><span>${escapeHtml(row.warning_level || "待导入预警名单")}</span></div>
-        <div class="detail-row"><span>中科院分区</span><span>${escapeHtml(row.cas_zone || "待导入中科院分区")}</span></div>
-        <div class="detail-row"><span>创刊/新刊</span><span>${escapeHtml(row.founding_year || "待补创刊时间")} ${row.is_new_journal ? "新刊" : ""}</span></div>
-        <div class="detail-row"><span>PubMed 发文</span><span>${escapeHtml(row.pubmed_count)}（下一阶段采集）</span></div>
-        <div class="detail-row"><span>投稿周期</span><span>received / revised / accepted / published 平均周期待采集</span></div>
+        <div class="chips">
+          <span class="chip">${escapeHtml(row.index_type)}</span>
+          <span class="chip amber">${escapeHtml(quartile(row) || "无分区")}</span>
+          ${row.is_biomed ? `<span class="chip green">生物医药</span>` : `<span class="chip gray">非医药</span>`}
+          ${row.warning_level ? `<span class="chip amber">预警 ${escapeHtml(row.warning_level)}</span>` : ""}
+          ${row.cas_zone ? `<span class="chip green">中科院 ${escapeHtml(row.cas_zone)}</span>` : ""}
+          ${row.is_new_journal ? `<span class="chip amber">新刊</span>` : ""}
+        </div>
+
+        <div class="detail-section">
+          <h4>核心信息</h4>
+          <div class="detail-grid">
+            <div class="detail-row"><span>影响因子</span><span>${fmtIf(row.impact_factor)} ${escapeHtml(quartile(row) || "")}</span></div>
+            <div class="detail-row"><span>ISSN</span><span>${escapeHtml(row.issn)} / ${escapeHtml(row.eissn)}</span></div>
+            <div class="detail-row"><span>JCR 分类</span><span>${escapeHtml(row.categories)}</span></div>
+            <div class="detail-row"><span>语言</span><span>${escapeHtml(row.languages)}</span></div>
+            <div class="detail-row"><span>生物医药依据</span><span>${escapeHtml(row.biomed_reason || "未命中分类白名单")}</span></div>
+            <div class="detail-row"><span>创刊/新刊</span><span>${escapeHtml(row.founding_year || "待补创刊时间")} ${row.is_new_journal ? "新刊" : ""}</span></div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4>国家与机构信号</h4>
+          <div class="detail-grid">
+            <div class="detail-row"><span>出版社国家</span><span>${escapeHtml(publisherCountryName(row))}</span></div>
+            <div class="detail-row"><span>国家合集</span><span>${escapeHtml(countrySummary(row))}</span></div>
+            ${countryRows || `<div class="detail-row"><span>国家来源</span><span>待 enrichment 导入</span></div>`}
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4>出版社与扩展字段</h4>
+          <div class="detail-grid">
+            <div class="detail-row"><span>出版社</span><span>${escapeHtml(row.publisher)}</span></div>
+            <div class="detail-row"><span>出版社地址</span><span>${escapeHtml(row.publisher_address)}</span></div>
+            <div class="detail-row"><span>预警标识</span><span>${escapeHtml(row.warning_level || "待导入预警名单")}</span></div>
+            <div class="detail-row"><span>中科院分区</span><span>${escapeHtml(row.cas_zone || "待导入中科院分区")}</span></div>
+            <div class="detail-row"><span>PubMed 发文</span><span>${pubmedTotal(row) ? fmtNum(pubmedTotal(row)) : "待采集"}（2021-2025 合计优先）</span></div>
+            <div class="detail-row"><span>投稿周期</span><span>received / revised / accepted / published 平均周期待采集</span></div>
+          </div>
+        </div>
       `;
+      modal.classList.add("open");
+      modal.setAttribute("aria-hidden", "false");
+      document.querySelector("#modalClose").focus();
+    }
+
+    function closeDetail() {
+      const modal = document.querySelector("#detailModal");
+      modal.classList.remove("open");
+      modal.setAttribute("aria-hidden", "true");
+      state.selected = null;
+    }
+
+    function csvValue(value) {
+      const raw = text(value);
+      return /[",\n\r]/.test(raw) ? `"${raw.replaceAll('"', '""')}"` : raw;
+    }
+
+    function exportCurrentCsv() {
+      const rows = currentRows();
+      const range = selectedPubmedRange();
+      const headers = [
+        "title",
+        "index_type",
+        "impact_factor",
+        "quartile",
+        "category",
+        "issn",
+        "eissn",
+        "publisher",
+        "publisher_country",
+        "journal_countries",
+        "country_roles",
+        "pubmed_selected_interval",
+        "warning_level",
+        "cas_zone",
+        "founding_year"
+      ];
+      const body = rows.map(row => [
+        row.title,
+        row.index_type,
+        row.impact_factor,
+        quartile(row),
+        categoryName(row),
+        row.issn,
+        row.eissn,
+        row.publisher,
+        publisherCountryName(row),
+        countrySummary(row),
+        countryRecords(row).map(record => record.role).filter(Boolean).join("; "),
+        pubmedTotal(row, range.start, range.end),
+        row.warning_level,
+        row.cas_zone,
+        row.founding_year
+      ].map(csvValue).join(","));
+      const csv = [headers.join(","), ...body].join("\r\n");
+      const blob = new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const suffix = range.active ? `pubmed_${range.start || "min"}_${range.end || "max"}` : "all";
+      link.href = url;
+      link.download = `sci-journals-filtered-${suffix}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
     }
 
     function bindResultClicks(rows) {
       document.querySelector("#resultMount").querySelectorAll("[data-id]").forEach(node => {
         node.addEventListener("click", () => {
-          const id = Number(node.getAttribute("data-id"));
-          const row = rows.find(item => item.id === id);
-          state.selected = row || null;
-          renderDetail(state.selected);
+            const id = Number(node.getAttribute("data-id"));
+            const row = rows.find(item => item.id === id);
+            state.selected = row || null;
+            if (state.selected) renderDetail(state.selected);
+          });
         });
-      });
-    }
+      }
 
     function render() {
       const rows = currentRows();
       renderStats(rows);
       renderBars("#categoryBars", counter(rows, categoryName), 12);
-      renderBars("#countryBars", counter(rows, countryName), 10);
+      renderBars("#countryBars", multiCounter(rows, row => countryNames(row, document.querySelector("#countryRole").value)), 10);
       renderBars("#publisherBars", counter(rows, publisherName), 10);
       renderBars("#ifBars", counter(rows, ifBucket), 8);
 
@@ -905,8 +1236,7 @@
       document.querySelector("#resultNote").textContent = note;
 
       if (!rows.includes(state.selected)) {
-        state.selected = rows[0] || null;
-        renderDetail(state.selected);
+        closeDetail();
       }
     }
 
@@ -943,7 +1273,7 @@
       render();
     }
 
-    for (const id of ["q", "indexType", "category", "country", "publisher", "quartile", "ifMin", "sortBy"]) {
+    for (const id of ["q", "indexType", "category", "country", "countryRole", "publisher", "quartile", "ifMin", "sortBy"]) {
       document.querySelector(`#${id}`).addEventListener("input", render);
     }
 
@@ -953,6 +1283,16 @@
 
     document.querySelector("#cardViewBtn").addEventListener("click", () => setView("cards"));
     document.querySelector("#tableViewBtn").addEventListener("click", () => setView("table"));
+    document.querySelector("#exportCsvBtn").addEventListener("click", exportCurrentCsv);
+    document.querySelector("#modalClose").addEventListener("click", closeDetail);
+    document.querySelector("#detailModal").addEventListener("click", event => {
+      if (event.target.id === "detailModal") closeDetail();
+    });
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && document.querySelector("#detailModal").classList.contains("open")) {
+        closeDetail();
+      }
+    });
 
     load();
   </script>

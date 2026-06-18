@@ -10,22 +10,24 @@ Build the 2025 backend database and frontend dashboard into an extensible journa
 
 - [x] Add publisher-country field parsed from publisher address.
 - [ ] Rename current `country` semantics in UI/docs to `publisher_country` unless a better source is imported.
-- [ ] Add journal-country / affiliation-country model separate from publisher country:
+- [x] Add journal-country / affiliation-country model separate from publisher country:
   - `journal_countries`
   - country name
   - role: publisher, owner, sponsor, society, editorial office, institution, collaborator, inferred
   - source URL/file
   - confidence
-- [ ] Support multi-country journals. A journal must be findable by any associated country, not just publisher address.
+- [x] Add frontend/export support for multi-country journals. A journal can be found by any associated country once enrichment records exist.
+- [ ] Run broad multi-country enrichment scan and review coverage. Start with DOAJ institution/publisher metadata, then OpenAlex source/society metadata, then Wikidata/official pages for unresolved records.
 - [ ] Add country-source audit note for cases like `Signal Transduction and Targeted Therapy`, where publisher country can differ from journal/institutional origin.
-- [ ] Replace PowerShell-heavy background work with Python runners:
+- [x] Add Python runner shape for journal-country enrichment:
   - queue table
   - checkpoint/resume
   - rate limit
   - structured logs
   - no continuous monitoring
-- [ ] Build journal metadata enrichment pipeline for country/owner/sponsor/editorial-office:
-  - start from known publisher/journal pages
+- [ ] Build full journal metadata enrichment pipeline for country/owner/sponsor/editorial-office:
+  - start from DOAJ and OpenAlex database/API scans
+  - then use known publisher/journal pages
   - cache every fetched page/API response
   - low concurrency only
   - confidence scoring
@@ -90,9 +92,10 @@ Build the 2025 backend database and frontend dashboard into an extensible journa
 - [x] Make local `file://` viewing work via `journals-data.js`.
 - [x] Add country/region distribution and filter.
 - [x] Add publisher distribution and filter.
-- [ ] Rename current country filter to `publisher country` until journal-country data is imported.
-- [ ] Add multi-country filter after `journal_countries` exists.
-- [ ] Support journal filtering by publication-time interval once five-year PubMed counts are populated:
+- [x] Rename/reshape country filter semantics so it matches multi-role country signals and still distinguishes publisher country in details.
+- [x] Add multi-country filter after `journal_countries` exists.
+- [x] Replace the cramped right-side journal detail panel with a click-to-open floating detail page/modal.
+- [x] Support journal filtering by publication-time interval once five-year PubMed counts are populated:
   - user chooses start year and end year
   - dashboard filters journals with publications in that interval
   - show total publications in selected interval
@@ -105,17 +108,17 @@ Build the 2025 backend database and frontend dashboard into an extensible journa
   - ignore stopwords such as `of`, `and`, `the`, `for`, `in`
   - support partial initials and mixed title tokens
 - [ ] Support initials/acronym search from JCR abbreviated journal title after backend stores abbreviations.
-- [ ] Improve fuzzy search for title fragments such as `nature genetic` matching `Nature Genetics`.
+- [x] Improve fuzzy search for title fragments such as `nature genetic` matching `Nature Genetics`.
 - [x] Add warning-journal badge placeholder.
 - [x] Add CAS partition badge placeholder.
 - [x] Add new-journal badge placeholder.
-- [ ] Add recent five-year publication count column/card metric.
+- [x] Add recent five-year publication count column/card metric.
 - [ ] Add journal detail sections:
   - JCR/WoS category
   - PubMed publication trend
   - manuscript timeline averages
   - warning/CAS/founding annotations
-- [ ] Add export button for filtered subset CSV.
+- [x] Add export button for filtered subset CSV.
 - [x] Add GitHub Pages workflow to publish `web/`.
 
 ## Data Sources Needed

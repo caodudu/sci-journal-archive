@@ -43,16 +43,31 @@ Use existing local fields:
 
 Do not infer journal country from publisher country except as `publisher` role.
 
-### Stage 2: External API Candidates
+### Stage 2: External API / Database Candidates
 
 For each journal, query low-rate APIs by ISSN/title:
 
+- DOAJ journal metadata
 - Crossref journal metadata
 - OpenAlex sources
 - ISSN Portal if access is available
 - Wikidata as an auxiliary source
 
 Store raw responses in cache files. Do not overwrite manually reviewed data.
+
+Current implementation:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\run_python.ps1 scripts\enrich_journal_countries.py seed-queue --source doaj_journals --only-biomed --limit 500
+powershell -ExecutionPolicy Bypass -File .\run_python.ps1 scripts\enrich_journal_countries.py run --source doaj_journals --limit 200 --delay 1
+
+powershell -ExecutionPolicy Bypass -File .\run_python.ps1 scripts\enrich_journal_countries.py seed-queue --source openalex_sources --only-biomed --limit 500
+powershell -ExecutionPolicy Bypass -File .\run_python.ps1 scripts\enrich_journal_countries.py run --source openalex_sources --limit 200 --delay 1 --mailto your.name@example.com
+```
+
+DOAJ is the preferred first scan for open-access journals because it can expose both `publisher.country` and `institution.country`. For example, `Signal Transduction and Targeted Therapy` returns `publisher.country = GB` and `institution.country = CN`, allowing the frontend to find it under both United Kingdom and China with distinct roles.
+
+OpenAlex is useful for source-level coverage (`country_code`, host organization, society metadata when present), but its `country_code` should be treated as a source/publisher geography signal rather than true owner/sponsor/editorial-office country.
 
 ### Stage 3: Official Page Fetching
 
@@ -89,12 +104,12 @@ Every country signal should have:
 journal_id
 country
 role
-source_url
-source_type
-confidence
-note
-fetched_at
-review_status
+    source/source_url
+    source_type
+    confidence
+    note
+    fetched_at
+    review_status
 ```
 
 Suggested confidence:
@@ -111,7 +126,7 @@ Ambiguous records go into a review queue.
 Suggested command:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\run_python.ps1 scripts\enrich_journal_metadata.py run --limit 200 --delay 2 --max-workers 1
+powershell -ExecutionPolicy Bypass -File .\run_python.ps1 scripts\enrich_journal_countries.py run --source doaj_journals --limit 200 --delay 1
 ```
 
 The runner should:
@@ -119,7 +134,7 @@ The runner should:
 - read from an SQLite queue table
 - skip completed records
 - retry transient failures with backoff
-- save raw HTML/API JSON under `data/raw/enrichment_cache/`
+- save raw HTML/API JSON under `data/raw/enrichment_cache/` (gitignored)
 - write normalized candidates to SQLite
 - emit compact logs
 

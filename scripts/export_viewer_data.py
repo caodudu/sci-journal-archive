@@ -4,6 +4,7 @@ import argparse
 import json
 import sqlite3
 from pathlib import Path
+from typing import Any
 
 from common import DEFAULT_DB, ROOT
 from init_db import init_db
@@ -11,6 +12,69 @@ from init_db import init_db
 
 DEFAULT_OUT = ROOT / "web" / "journals.json"
 DEFAULT_JS_OUT = ROOT / "web" / "journals-data.js"
+
+
+def country_record(
+    country: str | None,
+    country_code: str | None,
+    role: str,
+    source: str,
+    source_type: str,
+    confidence: float,
+    note: str | None = None,
+    review_status: str = "accepted",
+) -> dict[str, Any] | None:
+    if not country:
+        return None
+    return {
+        "country": country,
+        "country_code": country_code,
+        "role": role,
+        "source": source,
+        "source_type": source_type,
+        "confidence": confidence,
+        "note": note,
+        "review_status": review_status,
+    }
+
+
+def load_country_records(conn: sqlite3.Connection) -> dict[int, list[dict[str, Any]]]:
+    records: dict[int, list[dict[str, Any]]] = {}
+    rows = conn.execute(
+        """
+        SELECT
+            journal_id,
+            country,
+            country_code,
+            role,
+            source,
+            source_type,
+            confidence,
+            note,
+            review_status
+        FROM journal_countries
+        WHERE review_status != 'rejected'
+        ORDER BY journal_id, confidence DESC, role, country
+        """
+    ).fetchall()
+    for row in rows:
+        item = dict(row)
+        records.setdefault(item.pop("journal_id"), []).append(item)
+    return records
+
+
+def load_pubmed_year_counts(conn: sqlite3.Connection) -> dict[int, dict[str, int]]:
+    counts: dict[int, dict[str, int]] = {}
+    rows = conn.execute(
+        """
+        SELECT journal_id, pub_year, count
+        FROM pubmed_year_counts
+        ORDER BY journal_id, pub_year
+        """
+    ).fetchall()
+    for row in rows:
+        counts.setdefault(row["journal_id"], {})[str(row["pub_year"])] = int(row["count"])
+    return counts
 
 
 def export_json(db_path: Path, out_path: Path, years: list[int] | None = None, js_out_path: Path | None = DEFAULT_JS_OUT) -> int:
@@ -33,6 +97,7 @@ def export_json(db_path: Path, out_path: Path, years: list[int] | None = None, j
                 j.eissn,
                 j.publisher,
                 j.country,
+                j.country AS publisher_country,
                 j.publisher_address,
                 j.languages,
                 j.founding_year,
@@ -71,12 +136,32 @@ def export_json(db_path: Path, out_path: Path, years: list[int] | None = None, j
             """,
             params,
         ).fetchall()
+        journal_country_records = load_country_records(conn)
+        pubmed_year_counts = load_pubmed_year_counts(conn)
 
     out = []
     for row in rows:
         item = dict(row)
         item["is_biomed"] = bool(item["is_biomed"])
         item["is_new_journal"] = bool(item["is_new_journal"])
+        publisher_record = country_record(
+            item.get("publisher_country"),
+            None,
+            "publisher",
+            "Web of Science Publisher address",
+            "wos_publisher_address",
+            0.7,
+            "Parsed from Web of Science publisher address; not a journal owner/sponsor/editorial-office country.",
+        )
+        records = []
+        if publisher_record:
+            records.append(publisher_record)
+        records.extend(journal_country_records.get(item["id"], []))
+        item["journal_country_records"] = records
+        item["journal_countries"] = sorted({record["country"] for record in records if record.get("country")})
+        item["journal_country_roles"] = sorted({record["role"] for record in records if record.get("role")})
+        item["pubmed_year_counts"] = pubmed_year_counts.get(item["id"], {})
+        item["pubmed_recent_total"] = sum(item["pubmed_year_counts"].get(str(year), 0) for year in range(2021, 2026))
         for key in ["avg_received_to_accepted", "avg_accepted_to_published", "avg_received_to_published"]:
             if item[key] is not None:
                 item[key] = round(float(item[key]), 1)

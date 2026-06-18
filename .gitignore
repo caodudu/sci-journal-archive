@@ -5,6 +5,7 @@ scripts/__pycache__/
 data/processed/*.sqlite
 data/processed/*.sqlite-*
 data/processed/*.csv
+data/raw/enrichment_cache/
 data/raw/public_sources/
 !data/raw/jcr_exports/
 !data/raw/jcr_exports/README.md

@@ -80,6 +80,42 @@ CREATE TABLE IF NOT EXISTS journal_cas_partitions (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_cas_partition_identity
 ON journal_cas_partitions(journal_id, cas_year, COALESCE(cas_source, ''));
 
+CREATE TABLE IF NOT EXISTS journal_countries (
+    id INTEGER PRIMARY KEY,
+    journal_id INTEGER NOT NULL REFERENCES journals(id),
+    country TEXT NOT NULL,
+    country_code TEXT,
+    role TEXT NOT NULL,
+    source TEXT NOT NULL,
+    source_type TEXT NOT NULL,
+    confidence REAL NOT NULL,
+    note TEXT,
+    review_status TEXT NOT NULL DEFAULT 'candidate',
+    collected_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_journal_countries_identity
+ON journal_countries(journal_id, country, role, source);
+
+CREATE INDEX IF NOT EXISTS idx_journal_countries_country
+ON journal_countries(country, role);
+
+CREATE TABLE IF NOT EXISTS journal_country_enrichment_queue (
+    id INTEGER PRIMARY KEY,
+    journal_id INTEGER NOT NULL REFERENCES journals(id),
+    source TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    attempts INTEGER NOT NULL DEFAULT 0,
+    next_run_at TEXT,
+    last_error TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(journal_id, source)
+);
+
+CREATE INDEX IF NOT EXISTS idx_journal_country_queue_status
+ON journal_country_enrichment_queue(status, next_run_at);
+
 CREATE VIEW IF NOT EXISTS v_journal_summary AS
 SELECT
     j.id,
@@ -88,6 +124,7 @@ SELECT
     j.eissn,
     j.publisher,
     j.country,
+    j.country AS publisher_country,
     j.publisher_address,
     j.languages,
     j.founding_year,
