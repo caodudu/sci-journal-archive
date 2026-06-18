@@ -1,0 +1,960 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SCI Journal Intelligence</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --panel-soft: #f9fbfe;
+      --ink: #172033;
+      --muted: #63708a;
+      --line: #d9e0ec;
+      --blue: #1e63d6;
+      --blue-soft: #eaf2ff;
+      --green: #0f8a5f;
+      --green-soft: #e8f7f1;
+      --amber: #996600;
+      --amber-soft: #fff5d6;
+      --red-soft: #fdecec;
+      --shadow: 0 8px 24px rgba(25, 42, 70, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+    }
+
+    button, input, select {
+      font: inherit;
+    }
+
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
+      padding: 22px clamp(18px, 4vw, 42px);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      line-height: 1.2;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      line-height: 1.55;
+      max-width: 980px;
+    }
+
+    .dataset-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+      align-items: center;
+    }
+
+    .dataset-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel-soft);
+      padding: 7px 12px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .dataset-pill strong {
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 310px minmax(0, 1fr);
+      gap: 18px;
+      padding: 18px clamp(18px, 4vw, 42px) 34px;
+    }
+
+    aside, section.panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    aside {
+      align-self: start;
+      position: sticky;
+      top: 14px;
+      padding: 16px;
+    }
+
+    .filter-title, .section-title {
+      margin: 0 0 12px;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .field {
+      margin-bottom: 12px;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    input, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+      color: var(--ink);
+      padding: 10px 11px;
+      min-height: 40px;
+    }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .segmented button {
+      border: 0;
+      border-right: 1px solid var(--line);
+      background: #fff;
+      color: var(--muted);
+      min-height: 38px;
+      cursor: pointer;
+    }
+
+    .segmented button:last-child { border-right: 0; }
+    .segmented button.active {
+      background: var(--blue-soft);
+      color: var(--blue);
+      font-weight: 700;
+    }
+
+    .content {
+      min-width: 0;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .stat {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 13px;
+      box-shadow: var(--shadow);
+      min-height: 86px;
+    }
+
+    .stat b {
+      display: block;
+      font-size: 24px;
+      line-height: 1.2;
+      margin-bottom: 5px;
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .panel {
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .view-buttons {
+      display: inline-flex;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      overflow: hidden;
+    }
+
+    .view-buttons button {
+      border: 0;
+      border-right: 1px solid var(--line);
+      background: #fff;
+      color: var(--muted);
+      padding: 8px 11px;
+      cursor: pointer;
+    }
+
+    .view-buttons button:last-child { border-right: 0; }
+    .view-buttons button.active {
+      color: var(--blue);
+      background: var(--blue-soft);
+      font-weight: 700;
+    }
+
+    .journal-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .journal-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 13px;
+      cursor: pointer;
+    }
+
+    .journal-card:hover {
+      border-color: #9db7e8;
+      box-shadow: 0 6px 18px rgba(30, 99, 214, 0.11);
+    }
+
+    .journal-head {
+      display: flex;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .journal-title {
+      font-weight: 700;
+      line-height: 1.35;
+      margin-bottom: 8px;
+    }
+
+    .journal-meta {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 9px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 12px;
+      background: var(--blue-soft);
+      color: var(--blue);
+      white-space: nowrap;
+    }
+
+    .chip.green {
+      background: var(--green-soft);
+      color: var(--green);
+    }
+
+    .chip.amber {
+      background: var(--amber-soft);
+      color: var(--amber);
+    }
+
+    .chip.gray {
+      background: #eef1f5;
+      color: var(--muted);
+    }
+
+    .if-box {
+      min-width: 72px;
+      text-align: right;
+    }
+
+    .if-box b {
+      display: block;
+      font-size: 22px;
+      line-height: 1.1;
+    }
+
+    .if-box span {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .bars {
+      display: grid;
+      gap: 9px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: minmax(130px, 1fr) minmax(120px, 2fr) 58px;
+      gap: 9px;
+      align-items: center;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .bar-label {
+      color: var(--ink);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bar-track {
+      height: 9px;
+      border-radius: 999px;
+      background: #edf1f7;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      width: 0;
+      background: var(--blue);
+      border-radius: 999px;
+    }
+
+    .detail {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-soft);
+      padding: 14px;
+      min-height: 260px;
+    }
+
+    .detail h3 {
+      margin: 0 0 10px;
+      font-size: 18px;
+      line-height: 1.35;
+    }
+
+    .detail-row {
+      display: grid;
+      grid-template-columns: 112px minmax(0, 1fr);
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+    }
+
+    .detail-row:last-child { border-bottom: 0; }
+    .detail-row span:first-child { color: var(--muted); }
+
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      max-height: 620px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 900px;
+      font-size: 13px;
+      background: #fff;
+    }
+
+    th, td {
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: #f1f5fb;
+      z-index: 1;
+    }
+
+    td.num { text-align: right; white-space: nowrap; }
+
+    .empty {
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      padding: 30px;
+      color: var(--muted);
+      text-align: center;
+      background: #fff;
+    }
+
+    .small-note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 1120px) {
+      main, .grid {
+        grid-template-columns: 1fr;
+      }
+
+      aside {
+        position: static;
+      }
+
+      .stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      header, main {
+        padding-left: 14px;
+        padding-right: 14px;
+      }
+
+      h1 { font-size: 22px; }
+      .stats { grid-template-columns: 1fr; }
+      .bar-row { grid-template-columns: 1fr; }
+      .detail-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>SCI / SCIE / ESCI 期刊情报工作台</h1>
+    <div class="subtitle">
+      当前数据集为 2025 JCR 影响因子表，并按 2025 Web of Science Core Collection 的 SCIE / ESCI 全量名单匹配分组。生物医药子集采用 JCR/WoS 学科分类白名单，不使用标题关键词粗筛。
+    </div>
+    <div class="dataset-bar" id="datasetBar"></div>
+  </header>
+
+  <main>
+    <aside>
+      <h2 class="filter-title">筛选研究对象</h2>
+
+      <div class="field">
+        <label for="q">检索</label>
+        <input id="q" type="search" placeholder="期刊名、ISSN、出版社、分类">
+      </div>
+
+      <div class="field">
+        <label>范围</label>
+        <div class="segmented" id="scopeButtons">
+          <button type="button" data-scope="biomed" class="active">生物医药</button>
+          <button type="button" data-scope="all">全部</button>
+          <button type="button" data-scope="nonbiomed">非医药</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="indexType">索引</label>
+        <select id="indexType">
+          <option value="">SCIE + ESCI</option>
+          <option value="SCIE">SCIE</option>
+          <option value="ESCI">ESCI</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="category">JCR/WoS 分类</label>
+        <select id="category">
+          <option value="">全部分类</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="country">出版社国家/地区（临时）</label>
+        <select id="country">
+          <option value="">全部国家/地区</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="publisher">出版社</label>
+        <select id="publisher">
+          <option value="">全部出版社</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="quartile">JIF 分区</label>
+        <select id="quartile">
+          <option value="">全部分区</option>
+          <option value="Q1">Q1</option>
+          <option value="Q2">Q2</option>
+          <option value="Q3">Q3</option>
+          <option value="Q4">Q4</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="ifMin">最低影响因子</label>
+        <input id="ifMin" type="number" min="0" step="0.1" placeholder="例如 3">
+      </div>
+
+      <div class="field">
+        <label for="sortBy">排序</label>
+        <select id="sortBy">
+          <option value="if_desc">影响因子从高到低</option>
+          <option value="if_asc">影响因子从低到高</option>
+          <option value="title_asc">期刊名 A-Z</option>
+          <option value="category_asc">分类 A-Z</option>
+        </select>
+      </div>
+
+      <p class="small-note">
+        这里的“生物医药”是可审计的分类白名单结果。后面接 PubMed 发文量、投稿周期后，会在同一个详情视图里继续补字段。
+      </p>
+    </aside>
+
+    <div class="content">
+      <section class="stats" aria-label="数据概览">
+        <div class="stat"><b id="statRows">0</b><span>当前筛选记录</span></div>
+        <div class="stat"><b id="statScie">0</b><span>SCIE</span></div>
+        <div class="stat"><b id="statEsci">0</b><span>ESCI</span></div>
+        <div class="stat"><b id="statMedianIf">NA</b><span>中位影响因子</span></div>
+        <div class="stat"><b id="statPubmed">待采集</b><span>PubMed / 周期字段</span></div>
+      </section>
+
+      <div class="grid">
+        <section class="panel">
+          <div class="toolbar">
+            <h2 class="section-title">期刊候选集</h2>
+            <div class="view-buttons">
+              <button type="button" id="cardViewBtn" class="active">卡片</button>
+              <button type="button" id="tableViewBtn">紧凑表</button>
+            </div>
+          </div>
+          <div id="resultMount"></div>
+          <p class="small-note" id="resultNote"></p>
+        </section>
+
+        <div>
+          <section class="panel">
+            <h2 class="section-title">分类构成</h2>
+            <div class="bars" id="categoryBars"></div>
+          </section>
+
+          <section class="panel">
+            <h2 class="section-title">出版社国家/地区（临时）</h2>
+            <div class="bars" id="countryBars"></div>
+          </section>
+
+          <section class="panel">
+            <h2 class="section-title">出版社</h2>
+            <div class="bars" id="publisherBars"></div>
+          </section>
+
+          <section class="panel">
+            <h2 class="section-title">影响因子分布</h2>
+            <div class="bars" id="ifBars"></div>
+          </section>
+
+          <section class="panel">
+            <h2 class="section-title">期刊详情</h2>
+            <div class="detail" id="detailMount">
+              <p class="small-note">点击左侧任一期刊，查看分类、ISSN、影响因子、未来 PubMed 采集字段。</p>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="journals-data.js"></script>
+  <script>
+    const state = {
+      rows: [],
+      scope: "biomed",
+      view: "cards",
+      selected: null,
+    };
+
+    const MAX_RENDER = 160;
+
+    function text(value) {
+      return value === null || value === undefined || value === "" ? "NA" : String(value);
+    }
+
+    function escapeHtml(value) {
+      return text(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function fmtNum(value) {
+      return Number(value || 0).toLocaleString("zh-CN");
+    }
+
+    function fmtIf(value) {
+      return value === null || value === undefined || value === "" ? "NA" : Number(value).toFixed(1);
+    }
+
+    function categoryName(row) {
+      const raw = row.categories || "";
+      return raw.split(";")[0].split("|")[0].trim() || "未分类";
+    }
+
+    function countryName(row) {
+      return row.country || "未记录";
+    }
+
+    function publisherName(row) {
+      return row.publisher || "未记录";
+    }
+
+    function quartile(row) {
+      const raw = row.categories || "";
+      const parts = raw.split("|");
+      const hit = parts.find(part => /^Q[1-4]$/i.test(part.trim()));
+      return hit ? hit.trim().toUpperCase() : "";
+    }
+
+    function titleInitials(value) {
+      const stopwords = new Set(["of", "and", "the", "for", "in", "on", "to", "a", "an"]);
+      return text(value)
+        .toLowerCase()
+        .replaceAll("&", " and ")
+        .split(/[^a-z0-9]+/)
+        .filter(word => word && !stopwords.has(word))
+        .map(word => word[0])
+        .join("");
+    }
+
+    function normalizedText(value) {
+      return text(value).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    }
+
+    function median(values) {
+      const nums = values.filter(value => Number.isFinite(value)).sort((a, b) => a - b);
+      if (!nums.length) return null;
+      const mid = Math.floor(nums.length / 2);
+      return nums.length % 2 ? nums[mid] : (nums[mid - 1] + nums[mid]) / 2;
+    }
+
+    function uniqueYears(rows) {
+      return [...new Set(rows.map(row => row.year).filter(Boolean))].sort();
+    }
+
+    function currentRows() {
+      const q = document.querySelector("#q").value.trim().toLowerCase();
+      const indexType = document.querySelector("#indexType").value;
+      const category = document.querySelector("#category").value;
+      const country = document.querySelector("#country").value;
+      const publisher = document.querySelector("#publisher").value;
+      const qtile = document.querySelector("#quartile").value;
+      const ifMinText = document.querySelector("#ifMin").value;
+      const ifMin = ifMinText === "" ? null : Number(ifMinText);
+      const sortBy = document.querySelector("#sortBy").value;
+
+      const filtered = state.rows.filter(row => {
+        const haystack = [
+          row.title,
+          normalizedText(row.title),
+          titleInitials(row.title),
+          row.issn,
+          row.eissn,
+          row.publisher,
+          row.categories,
+          row.biomed_reason
+        ]
+          .join(" ")
+          .toLowerCase();
+        if (state.scope === "biomed" && !row.is_biomed) return false;
+        if (state.scope === "nonbiomed" && row.is_biomed) return false;
+        if (q && !haystack.includes(q)) return false;
+        if (indexType && row.index_type !== indexType) return false;
+        if (category && categoryName(row) !== category) return false;
+        if (country && countryName(row) !== country) return false;
+        if (publisher && publisherName(row) !== publisher) return false;
+        if (qtile && quartile(row) !== qtile) return false;
+        if (ifMin !== null && !(Number(row.impact_factor) >= ifMin)) return false;
+        return true;
+      });
+
+      filtered.sort((a, b) => {
+        if (sortBy === "title_asc") return text(a.title).localeCompare(text(b.title));
+        if (sortBy === "category_asc") return categoryName(a).localeCompare(categoryName(b)) || text(a.title).localeCompare(text(b.title));
+        if (sortBy === "if_asc") return (Number(a.impact_factor) || Number.POSITIVE_INFINITY) - (Number(b.impact_factor) || Number.POSITIVE_INFINITY) || text(a.title).localeCompare(text(b.title));
+        return (Number(b.impact_factor) || -1) - (Number(a.impact_factor) || -1) || text(a.title).localeCompare(text(b.title));
+      });
+
+      return filtered;
+    }
+
+    function renderDatasetBar() {
+      const years = uniqueYears(state.rows);
+      const total = state.rows.length;
+      const biomed = state.rows.filter(row => row.is_biomed).length;
+      const source = years.length === 1 ? `${years[0]} 单年数据集` : `${years.join(", ")} 多年数据集`;
+      document.querySelector("#datasetBar").innerHTML = `
+        <span class="dataset-pill">数据集 <strong>${escapeHtml(source)}</strong></span>
+        <span class="dataset-pill">全部记录 <strong>${fmtNum(total)}</strong></span>
+        <span class="dataset-pill">生物医药 <strong>${fmtNum(biomed)}</strong></span>
+        <span class="dataset-pill">扩展口 <strong>PubMed 发文量 / 投稿周期</strong></span>
+      `;
+    }
+
+    function populateSelect(selector, values) {
+      const select = document.querySelector(selector);
+      for (const value of values) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+      }
+    }
+
+    function populateFilters() {
+      populateSelect("#category", [...new Set(state.rows.map(categoryName).filter(Boolean))].sort());
+      populateSelect("#country", [...new Set(state.rows.map(countryName).filter(value => value && value !== "未记录"))].sort());
+      populateSelect("#publisher", [...new Set(state.rows.map(publisherName).filter(value => value && value !== "未记录"))].sort());
+    }
+
+    function renderStats(rows) {
+      document.querySelector("#statRows").textContent = fmtNum(rows.length);
+      document.querySelector("#statScie").textContent = fmtNum(rows.filter(row => row.index_type === "SCIE").length);
+      document.querySelector("#statEsci").textContent = fmtNum(rows.filter(row => row.index_type === "ESCI").length);
+      const med = median(rows.map(row => Number(row.impact_factor)));
+      document.querySelector("#statMedianIf").textContent = med === null ? "NA" : med.toFixed(1);
+    }
+
+    function counter(rows, keyFn) {
+      const map = new Map();
+      for (const row of rows) {
+        const key = keyFn(row);
+        map.set(key, (map.get(key) || 0) + 1);
+      }
+      return [...map.entries()].sort((a, b) => b[1] - a[1]);
+    }
+
+    function renderBars(mountId, entries, limit = 10) {
+      const mount = document.querySelector(mountId);
+      const top = entries.slice(0, limit);
+      if (!top.length) {
+        mount.innerHTML = `<div class="empty">没有可展示的分布</div>`;
+        return;
+      }
+      const max = top[0][1] || 1;
+      mount.innerHTML = top.map(([label, value]) => `
+        <div class="bar-row" title="${escapeHtml(label)}">
+          <div class="bar-label">${escapeHtml(label)}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.max(4, value / max * 100)}%"></div></div>
+          <div>${fmtNum(value)}</div>
+        </div>
+      `).join("");
+    }
+
+    function ifBucket(row) {
+      const value = Number(row.impact_factor);
+      if (!Number.isFinite(value)) return "IF 缺失";
+      if (value >= 20) return "IF >= 20";
+      if (value >= 10) return "10 <= IF < 20";
+      if (value >= 5) return "5 <= IF < 10";
+      if (value >= 3) return "3 <= IF < 5";
+      if (value >= 1) return "1 <= IF < 3";
+      return "IF < 1";
+    }
+
+    function renderCards(rows) {
+      const visible = rows.slice(0, MAX_RENDER);
+      if (!visible.length) return `<div class="empty">没有匹配的期刊</div>`;
+      return `<div class="journal-list">${visible.map(row => `
+        <article class="journal-card" data-id="${row.id}">
+          <div class="journal-head">
+            <div>
+              <div class="journal-title">${escapeHtml(row.title)}</div>
+              <div class="journal-meta">${escapeHtml(row.publisher)} · ${escapeHtml(countryName(row))} · ISSN ${escapeHtml(row.issn)} · eISSN ${escapeHtml(row.eissn)}</div>
+            </div>
+            <div class="if-box"><b>${fmtIf(row.impact_factor)}</b><span>JIF</span></div>
+          </div>
+          <div class="chips">
+            <span class="chip">${escapeHtml(row.index_type)}</span>
+            <span class="chip amber">${escapeHtml(quartile(row) || "无分区")}</span>
+            ${row.is_biomed ? `<span class="chip green">生物医药</span>` : `<span class="chip gray">非医药</span>`}
+            <span class="chip gray">${escapeHtml(categoryName(row))}</span>
+            ${row.warning_level ? `<span class="chip amber">预警 ${escapeHtml(row.warning_level)}</span>` : ""}
+            ${row.cas_zone ? `<span class="chip green">中科院 ${escapeHtml(row.cas_zone)}</span>` : ""}
+            ${row.is_new_journal ? `<span class="chip amber">新刊</span>` : ""}
+          </div>
+        </article>
+      `).join("")}</div>`;
+    }
+
+    function renderTable(rows) {
+      const visible = rows.slice(0, MAX_RENDER);
+      if (!visible.length) return `<div class="empty">没有匹配的期刊</div>`;
+      return `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>期刊</th>
+                <th>索引</th>
+                <th>JIF</th>
+                <th>分区</th>
+                <th>分类</th>
+                <th>ISSN / eISSN</th>
+                <th>国家/地区</th>
+                <th>出版社</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${visible.map(row => `
+                <tr data-id="${row.id}">
+                  <td>${escapeHtml(row.title)}</td>
+                  <td>${escapeHtml(row.index_type)}</td>
+                  <td class="num">${fmtIf(row.impact_factor)}</td>
+                  <td>${escapeHtml(quartile(row) || "NA")}</td>
+                  <td>${escapeHtml(categoryName(row))}</td>
+                  <td>${escapeHtml(row.issn)} / ${escapeHtml(row.eissn)}</td>
+                  <td>${escapeHtml(countryName(row))}</td>
+                  <td>${escapeHtml(row.publisher)}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderDetail(row) {
+      const mount = document.querySelector("#detailMount");
+      if (!row) {
+        mount.innerHTML = `<p class="small-note">点击任一期刊，查看分类、ISSN、影响因子、未来 PubMed 采集字段。</p>`;
+        return;
+      }
+      mount.innerHTML = `
+        <h3>${escapeHtml(row.title)}</h3>
+        <div class="detail-row"><span>索引</span><span>${escapeHtml(row.index_type)}</span></div>
+        <div class="detail-row"><span>影响因子</span><span>${fmtIf(row.impact_factor)} ${escapeHtml(quartile(row) || "")}</span></div>
+        <div class="detail-row"><span>JCR 分类</span><span>${escapeHtml(row.categories)}</span></div>
+        <div class="detail-row"><span>生物医药依据</span><span>${escapeHtml(row.biomed_reason || "未命中分类白名单")}</span></div>
+        <div class="detail-row"><span>ISSN</span><span>${escapeHtml(row.issn)} / ${escapeHtml(row.eissn)}</span></div>
+        <div class="detail-row"><span>出版社国家</span><span>${escapeHtml(countryName(row))}</span></div>
+        <div class="detail-row"><span>语言</span><span>${escapeHtml(row.languages)}</span></div>
+        <div class="detail-row"><span>出版社</span><span>${escapeHtml(row.publisher)}</span></div>
+        <div class="detail-row"><span>出版社地址</span><span>${escapeHtml(row.publisher_address)}</span></div>
+        <div class="detail-row"><span>预警标识</span><span>${escapeHtml(row.warning_level || "待导入预警名单")}</span></div>
+        <div class="detail-row"><span>中科院分区</span><span>${escapeHtml(row.cas_zone || "待导入中科院分区")}</span></div>
+        <div class="detail-row"><span>创刊/新刊</span><span>${escapeHtml(row.founding_year || "待补创刊时间")} ${row.is_new_journal ? "新刊" : ""}</span></div>
+        <div class="detail-row"><span>PubMed 发文</span><span>${escapeHtml(row.pubmed_count)}（下一阶段采集）</span></div>
+        <div class="detail-row"><span>投稿周期</span><span>received / revised / accepted / published 平均周期待采集</span></div>
+      `;
+    }
+
+    function bindResultClicks(rows) {
+      document.querySelector("#resultMount").querySelectorAll("[data-id]").forEach(node => {
+        node.addEventListener("click", () => {
+          const id = Number(node.getAttribute("data-id"));
+          const row = rows.find(item => item.id === id);
+          state.selected = row || null;
+          renderDetail(state.selected);
+        });
+      });
+    }
+
+    function render() {
+      const rows = currentRows();
+      renderStats(rows);
+      renderBars("#categoryBars", counter(rows, categoryName), 12);
+      renderBars("#countryBars", counter(rows, countryName), 10);
+      renderBars("#publisherBars", counter(rows, publisherName), 10);
+      renderBars("#ifBars", counter(rows, ifBucket), 8);
+
+      const mount = document.querySelector("#resultMount");
+      mount.innerHTML = state.view === "cards" ? renderCards(rows) : renderTable(rows);
+      bindResultClicks(rows);
+
+      const note = rows.length > MAX_RENDER
+        ? `当前筛选 ${fmtNum(rows.length)} 条，页面先展示前 ${MAX_RENDER} 条。可继续用分类、分区、IF 或关键词缩小范围。`
+        : `当前筛选 ${fmtNum(rows.length)} 条。`;
+      document.querySelector("#resultNote").textContent = note;
+
+      if (!rows.includes(state.selected)) {
+        state.selected = rows[0] || null;
+        renderDetail(state.selected);
+      }
+    }
+
+    function setScope(scope) {
+      state.scope = scope;
+      document.querySelectorAll("#scopeButtons button").forEach(button => {
+        button.classList.toggle("active", button.dataset.scope === scope);
+      });
+      render();
+    }
+
+    function setView(view) {
+      state.view = view;
+      document.querySelector("#cardViewBtn").classList.toggle("active", view === "cards");
+      document.querySelector("#tableViewBtn").classList.toggle("active", view === "table");
+      render();
+    }
+
+    async function load() {
+      if (Array.isArray(window.JOURNAL_ROWS)) {
+        state.rows = window.JOURNAL_ROWS;
+      } else {
+        try {
+          const response = await fetch("journals.json", { cache: "no-store" });
+          state.rows = response.ok ? await response.json() : [];
+        } catch (error) {
+          console.warn(error);
+          state.rows = [];
+        }
+      }
+
+      renderDatasetBar();
+      populateFilters();
+      render();
+    }
+
+    for (const id of ["q", "indexType", "category", "country", "publisher", "quartile", "ifMin", "sortBy"]) {
+      document.querySelector(`#${id}`).addEventListener("input", render);
+    }
+
+    document.querySelectorAll("#scopeButtons button").forEach(button => {
+      button.addEventListener("click", () => setScope(button.dataset.scope));
+    });
+
+    document.querySelector("#cardViewBtn").addEventListener("click", () => setView("cards"));
+    document.querySelector("#tableViewBtn").addEventListener("click", () => setView("table"));
+
+    load();
+  </script>
+</body>
+</html>
