@@ -84,7 +84,7 @@ Build the 2025 backend database and frontend dashboard into an extensible journa
   - Biology
   - Multidisciplinary Sciences
 - [x] Explicitly include biology, bioinformatics, systems biology, biomaterials, and computational biology related categories when available.
-- [ ] Add a frontend toggle to inspect why a journal is included in biomedical subset.
+- [x] Add a frontend toggle to inspect why a journal is included in biomedical subset.
 
 ## Frontend
 
@@ -113,7 +113,7 @@ Build the 2025 backend database and frontend dashboard into an extensible journa
 - [x] Add CAS partition badge placeholder.
 - [x] Add new-journal badge placeholder.
 - [x] Add recent five-year publication count column/card metric.
-- [ ] Add journal detail sections:
+- [x] Add journal detail sections:
   - JCR/WoS category
   - PubMed publication trend
   - manuscript timeline averages
