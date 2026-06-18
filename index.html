@@ -187,6 +187,21 @@
       gap: 8px;
     }
 
+    .check-field {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .check-field input {
+      width: auto;
+      min-height: 0;
+      margin-top: 2px;
+    }
+
     .segmented {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -526,6 +541,42 @@
       font-size: 14px;
     }
 
+    .detail-note {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .trend-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .trend-row {
+      display: grid;
+      grid-template-columns: 58px minmax(0, 1fr) 64px;
+      gap: 8px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .trend-track {
+      height: 8px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+    }
+
+    .trend-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--green);
+    }
+
     .table-wrap {
       overflow: auto;
       border: 1px solid var(--line);
@@ -634,6 +685,13 @@
           <button type="button" data-scope="all">全部</button>
           <button type="button" data-scope="nonbiomed">非医药</button>
         </div>
+      </div>
+
+      <div class="field">
+        <label class="check-field">
+          <input id="showBiomedReason" type="checkbox">
+          <span>显示生物医药纳入依据</span>
+        </label>
       </div>
 
       <div class="field">
@@ -819,6 +877,13 @@
       return raw.split(";")[0].split("|")[0].trim() || "未分类";
     }
 
+    function categoryItems(row) {
+      return text(row.categories)
+        .split(";")
+        .map(item => item.trim())
+        .filter(item => item && item !== "NA");
+    }
+
     function publisherCountryName(row) {
       return row.publisher_country || row.country || "未记录";
     }
@@ -916,6 +981,47 @@
         return Number(row.pubmed_count);
       }
       return total;
+    }
+
+    function pubmedTrendHtml(row) {
+      const counts = pubmedCounts(row);
+      const entries = Object.entries(counts)
+        .map(([year, count]) => [Number(year), Number(count) || 0])
+        .filter(([year]) => Number.isFinite(year))
+        .sort((a, b) => a[0] - b[0]);
+      if (!entries.length) {
+        return `<p class="detail-note">PubMed 年度发文量尚未导出。当前后台采集完成后，重新导出 viewer data 即可显示趋势。</p>`;
+      }
+      const max = Math.max(...entries.map(([, count]) => count), 1);
+      return `<div class="trend-list">${entries.map(([year, count]) => `
+        <div class="trend-row">
+          <span>${year}</span>
+          <div class="trend-track"><div class="trend-fill" style="width:${Math.max(4, count / max * 100)}%"></div></div>
+          <span>${fmtNum(count)}</span>
+        </div>
+      `).join("")}</div>`;
+    }
+
+    function manuscriptTimelineText(row) {
+      const parts = [];
+      if (row.avg_received_to_accepted !== null && row.avg_received_to_accepted !== undefined) {
+        parts.push(`投稿到接收 ${escapeHtml(row.avg_received_to_accepted)} 天`);
+      }
+      if (row.avg_accepted_to_published !== null && row.avg_accepted_to_published !== undefined) {
+        parts.push(`接收到发表 ${escapeHtml(row.avg_accepted_to_published)} 天`);
+      }
+      if (row.avg_received_to_published !== null && row.avg_received_to_published !== undefined) {
+        parts.push(`投稿到发表 ${escapeHtml(row.avg_received_to_published)} 天`);
+      }
+      return parts.length ? parts.join("；") : "待 PubMed 样本文献日期采集";
+    }
+
+    function annotationSummary(row) {
+      return [
+        row.warning_level ? `预警：${row.warning_level}${row.warning_source ? `（${row.warning_source}）` : ""}` : "预警：待导入",
+        row.cas_zone ? `中科院：${row.cas_zone}${row.cas_major_category ? ` / ${row.cas_major_category}` : ""}` : "中科院：待导入",
+        row.founding_year ? `创刊：${row.founding_year}` : "创刊：待补"
+      ];
     }
 
     function selectedPubmedRange() {
@@ -1073,6 +1179,7 @@
 
     function renderCards(rows) {
       const visible = rows.slice(0, MAX_RENDER);
+      const showReason = document.querySelector("#showBiomedReason").checked;
       if (!visible.length) return `<div class="empty">没有匹配的期刊</div>`;
       return `<div class="journal-list">${visible.map(row => `
         <article class="journal-card" data-id="${row.id}">
@@ -1093,6 +1200,7 @@
             ${row.is_new_journal ? `<span class="chip amber">新刊</span>` : ""}
             ${pubmedTotal(row) ? `<span class="chip green">PubMed ${fmtNum(pubmedTotal(row))}</span>` : ""}
           </div>
+          ${showReason ? `<p class="detail-note">${escapeHtml(row.is_biomed ? row.biomed_reason || "生物医药：已标记，依据待补" : "非生物医药：未命中当前分类白名单")}</p>` : ""}
         </article>
       `).join("")}</div>`;
     }
@@ -1148,9 +1256,10 @@
       const countryRows = countryRecords(row).map(record => `
         <div class="detail-row">
           <span>${escapeHtml(roleLabel(record.role))}</span>
-          <span>${escapeHtml(record.country)} · confidence ${escapeHtml(record.confidence)} · ${escapeHtml(record.source_type || "")}</span>
+          <span>${escapeHtml(record.country)} · confidence ${escapeHtml(record.confidence)} · ${escapeHtml(record.source_type || "")}${record.note ? ` · ${escapeHtml(record.note)}` : ""}</span>
         </div>
       `).join("");
+      const categories = categoryItems(row);
       mount.innerHTML = `
         <div class="chips">
           <span class="chip">${escapeHtml(row.index_type)}</span>
@@ -1166,11 +1275,20 @@
           <div class="detail-grid">
             <div class="detail-row"><span>影响因子</span><span>${fmtIf(row.impact_factor)} ${escapeHtml(quartile(row) || "")}</span></div>
             <div class="detail-row"><span>ISSN</span><span>${escapeHtml(row.issn)} / ${escapeHtml(row.eissn)}</span></div>
-            <div class="detail-row"><span>JCR 分类</span><span>${escapeHtml(row.categories)}</span></div>
             <div class="detail-row"><span>语言</span><span>${escapeHtml(row.languages)}</span></div>
-            <div class="detail-row"><span>生物医药依据</span><span>${escapeHtml(row.biomed_reason || "未命中分类白名单")}</span></div>
             <div class="detail-row"><span>创刊/新刊</span><span>${escapeHtml(row.founding_year || "待补创刊时间")} ${row.is_new_journal ? "新刊" : ""}</span></div>
           </div>
+        </div>
+
+        <div class="detail-section">
+          <h4>JCR / WoS 分类与生物医药依据</h4>
+          <div class="detail-grid">
+            <div class="detail-row"><span>首要分类</span><span>${escapeHtml(categoryName(row))}</span></div>
+            <div class="detail-row"><span>分区</span><span>${escapeHtml(quartile(row) || "NA")}</span></div>
+            <div class="detail-row"><span>全部分类</span><span>${escapeHtml(categories.join("；") || "未分类")}</span></div>
+            <div class="detail-row"><span>纳入依据</span><span>${escapeHtml(row.is_biomed ? row.biomed_reason || "已标记，依据待补" : "未命中当前分类白名单")}</span></div>
+          </div>
+          <p class="detail-note">生物医药范围来自 JCR/WoS 学科分类白名单，不使用期刊标题关键词粗筛。</p>
         </div>
 
         <div class="detail-section">
@@ -1180,17 +1298,32 @@
             <div class="detail-row"><span>国家合集</span><span>${escapeHtml(countrySummary(row))}</span></div>
             ${countryRows || `<div class="detail-row"><span>国家来源</span><span>待 enrichment 导入</span></div>`}
           </div>
+          <p class="detail-note">出版社国家来自 WoS 出版社地址；journal country 可来自 institution / society / sponsor / editorial office 等多角色来源。</p>
         </div>
 
         <div class="detail-section">
-          <h4>出版社与扩展字段</h4>
+          <h4>PubMed 发文趋势与投稿周期</h4>
+          ${pubmedTrendHtml(row)}
+          <div class="detail-grid">
+            <div class="detail-row"><span>2021-2025 合计</span><span>${pubmedTotal(row) ? fmtNum(pubmedTotal(row)) : "待采集"}</span></div>
+            <div class="detail-row"><span>投稿周期</span><span>${manuscriptTimelineText(row)}</span></div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4>预警 / 中科院 / 创刊信息</h4>
+          <div class="detail-grid">
+            ${annotationSummary(row).map((item, index) => `<div class="detail-row"><span>${["预警", "中科院", "创刊"][index]}</span><span>${escapeHtml(item)}</span></div>`).join("")}
+            <div class="detail-row"><span>预警备注</span><span>${escapeHtml(row.warning_note || "待导入")}</span></div>
+            <div class="detail-row"><span>新刊依据</span><span>${escapeHtml(row.new_journal_reason || "待补")}</span></div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4>出版社信息</h4>
           <div class="detail-grid">
             <div class="detail-row"><span>出版社</span><span>${escapeHtml(row.publisher)}</span></div>
             <div class="detail-row"><span>出版社地址</span><span>${escapeHtml(row.publisher_address)}</span></div>
-            <div class="detail-row"><span>预警标识</span><span>${escapeHtml(row.warning_level || "待导入预警名单")}</span></div>
-            <div class="detail-row"><span>中科院分区</span><span>${escapeHtml(row.cas_zone || "待导入中科院分区")}</span></div>
-            <div class="detail-row"><span>PubMed 发文</span><span>${pubmedTotal(row) ? fmtNum(pubmedTotal(row)) : "待采集"}（2021-2025 合计优先）</span></div>
-            <div class="detail-row"><span>投稿周期</span><span>received / revised / accepted / published 平均周期待采集</span></div>
           </div>
         </div>
       `;
@@ -1344,7 +1477,7 @@
       render();
     }
 
-    for (const id of ["q", "indexType", "category", "country", "countryRole", "publisher", "quartile", "ifMin", "sortBy"]) {
+    for (const id of ["q", "indexType", "category", "country", "countryRole", "publisher", "quartile", "ifMin", "pubmedStart", "pubmedEnd", "sortBy", "showBiomedReason"]) {
       document.querySelector(`#${id}`).addEventListener("input", render);
     }
 
