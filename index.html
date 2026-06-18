@@ -1054,7 +1054,7 @@
     }
 
     function ifDistribution(rows) {
-      const order = ["IF >= 20", "10 <= IF < 20", "5 <= IF < 10", "3 <= IF < 5", "IF < 1", "1 <= IF < 3", "IF 缺失"];
+      const order = ["IF >= 20", "10 <= IF < 20", "5 <= IF < 10", "3 <= IF < 5", "1 <= IF < 3", "IF < 1", "IF 缺失"];
       const counts = new Map(counter(rows, ifBucket));
       return order.filter(label => counts.has(label)).map(label => [label, counts.get(label)]);
     }
