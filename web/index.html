@@ -70,14 +70,26 @@
     }
 
     .theme-toggle {
+      display: inline-grid;
+      place-items: center;
       border: 1px solid var(--line);
-      border-radius: 999px;
+      border-radius: 8px;
       background: var(--panel-soft);
       color: var(--ink);
-      padding: 8px 12px;
-      min-height: 36px;
-      white-space: nowrap;
+      width: 38px;
+      height: 38px;
+      padding: 0;
       cursor: pointer;
+    }
+
+    .theme-toggle svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      stroke-width: 2;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
 
     h1 {
@@ -601,7 +613,7 @@
           当前数据集为 2025 JCR 影响因子表，并按 2025 Web of Science Core Collection 的 SCIE / ESCI 全量名单匹配分组。生物医药子集采用 JCR/WoS 学科分类白名单，不使用标题关键词粗筛。
         </div>
       </div>
-      <button type="button" class="theme-toggle" id="themeToggle">暗夜模式</button>
+      <button type="button" class="theme-toggle" id="themeToggle" aria-label="切换暗夜模式" title="切换暗夜模式"></button>
     </div>
     <div class="dataset-bar" id="datasetBar"></div>
   </header>
@@ -1032,7 +1044,7 @@
         mount.innerHTML = `<div class="empty">没有可展示的分布</div>`;
         return;
       }
-      const max = top[0][1] || 1;
+      const max = Math.max(...top.map(([, value]) => value || 0), 1);
       mount.innerHTML = top.map(([label, value]) => `
         <div class="bar-row" title="${escapeHtml(label)}">
           <div class="bar-label">${escapeHtml(label)}</div>
@@ -1301,7 +1313,12 @@
 
     function applyTheme(theme) {
       document.body.dataset.theme = theme;
-      document.querySelector("#themeToggle").textContent = theme === "dark" ? "日间模式" : "暗夜模式";
+      const button = document.querySelector("#themeToggle");
+      button.innerHTML = theme === "dark"
+        ? `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>`
+        : `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.99 13.28A8.5 8.5 0 1 1 10.72 3.01 7 7 0 0 0 20.99 13.28Z"></path></svg>`;
+      button.setAttribute("aria-label", theme === "dark" ? "切换日间模式" : "切换暗夜模式");
+      button.setAttribute("title", theme === "dark" ? "切换日间模式" : "切换暗夜模式");
       localStorage.setItem("sciJournalTheme", theme);
     }
 
