@@ -1,6 +1,6 @@
 # SCI Journal Archive TODO
 
-Last updated: 2026-06-18
+Last updated: 2026-06-19
 
 ## Current Focus
 
@@ -63,6 +63,11 @@ Build the 2025 backend database and frontend dashboard into an extensible journa
 - [x] Add recent five-year publication counts runner:
   - `pubmed_year_counts` already exists for yearly PubMed counts.
   - `scripts/start_pubmed_background.ps1` collects 2021-2025 for biomedical/cross-biology journals, 20 sampled articles per year, skip-existing enabled.
+- [x] Add retry/backoff and check-later progress reporting for the PubMed runner:
+  - append-only progress log
+  - atomically updated status JSON
+  - per journal-year failure logging without stopping the whole scan
+  - demo-tested before background launch
 - [ ] Add import scripts for external annotation files:
   - warning journals CSV
   - CAS partition CSV
